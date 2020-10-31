@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# TODO: Check if argument given, if not exit
+name="${1}"
+branch="$(cat .dum/BRANCH)"
+
+# TODO: Error out if branch already exists
+cp ".dum/branches/${branch}" ".dum/branches/${name}"
+echo "${name}" > ".dum/BRANCH"

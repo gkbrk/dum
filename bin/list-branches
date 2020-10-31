@@ -1,0 +1,14 @@
+#!/bin/sh
+
+current="$(cat .dum/BRANCH)"
+
+for branch in $(ls .dum/branches | sort)
+do
+    if [ "${branch}" = "${current}" ]
+    then
+        cur="* "
+    else
+        cur=""
+    fi
+    printf "%s%s\n" "${cur}" "${branch}"
+done

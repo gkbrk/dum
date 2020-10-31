@@ -1,0 +1,10 @@
+#!/bin/sh
+
+DIR=$(dirname "${0}")
+
+name="${1}"
+echo "${name}" > .dum/BRANCH
+
+rm -rfv * > /dev/null
+
+"${DIR}"/create-from-log ".dum/branches/${name}"
