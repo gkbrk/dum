@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+import difflib
+import sys
+from pathlib import Path
+
+branch = Path(".dum/BRANCH").read_text().strip()
+log = Path(f".dum/branches/{branch}")
+
+def history_get_file(path):
+    lines = []
+    f = None
+    l = None
+    for line in log.read_bytes().split(b"\n"):
+        if not line.strip():
+            continue
+
+        parts = line.split(b" ", 1)
+
+        cmd = parts[0].decode('ascii').replace("-", "_")
+        arg = b""
+
+        if len(parts) == 2:
+            arg = parts[1]
+
+        if cmd == "file":
+            f = arg.decode('utf-8')
+            l = 0
+
+        if cmd == "line":
+            l = int(arg)
+
+        if cmd == "add" and f == path:
+            lines.insert(l, arg.decode('utf-8'))
+            l += 1
+
+        if cmd == "del" and f == path:
+            lines.pop(l)
+
+    return lines
+
+def diff_file(path):
+    print("file", path)
+    hf = history_get_file(path)
+    cf = Path(path).read_text().splitlines()
+
+    l = 0
+    for diff in difflib.ndiff(hf, cf):
+        cmd, line = diff[0], diff[2:]
+        if cmd == " ":
+            l += 1
+        elif cmd == "?":
+            pass
+        elif cmd == "+":
+            print("line", l)
+            print("add", line)
+            l += 1
+        elif cmd == "-":
+            print("line", l)
+            print("del")
+
+print()
+# TODO: Generate automatically with command-line override
+print("date 2020-11-01")
+
+# TODO: Generate automatically with command-line override
+print("author Gokberk Yaltirakli <gokberk@gkbrk.com>")
+
+for path in sys.argv[2:]:
+    diff_file(path)
+
+print("msg", sys.argv[1])
+print("commit")
