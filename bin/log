@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+branch = Path(".dum/BRANCH").read_text().strip()
+
+log = Path(f".dum/branches/{branch}")
+
+author = None
+msg = None
+date = None
+desc = []
+num = 0
+add = 0
+rm = 0
+
+def out(*t):
+    print("".join([str(x) for x in t]), end="")
+
+for line in log.read_bytes().split(b'\n'):
+    if not line.strip(): continue
+    parts = line.split(b" ", 1)
+
+    cmd = parts[0].decode('ascii').replace("-", "_")
+    arg = b""
+
+    if len(parts) == 2:
+        arg = parts[1]
+
+    if cmd == "commit":
+        out("[COMMIT ", num, "] ", msg, "\n")
+        out("  ", add, " additions and ", rm, " removals\n")
+
+        if author:
+            out("  Author: ", author, "\n")
+
+        if date:
+            out("  Date: ", date, "\n")
+
+        if desc:
+            out("  Desc: ", desc[0], "\n")
+            for d in desc[1:]:
+                out("        ", d, "\n")
+
+        num += 1
+        msg = None
+        author = None
+        date = None
+        desc = []
+        add = 0
+        rm = 0
+
+    if cmd == "add":
+        add += 1
+
+    if cmd == "del":
+        rm += 1
+
+    if cmd == "msg":
+        msg = arg.decode("utf-8")
+
+    if cmd == "author":
+        author = arg.decode("utf-8")
+
+    if cmd == "date":
+        date = arg.decode("utf-8")
+
+    if cmd == "desc":
+        desc.append(arg.decode("utf-8"))
