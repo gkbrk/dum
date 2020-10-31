@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# TODO: Exit if repo already created
+
+DEFAULT_BRANCH="master"
+
+mkdir -p .dum
+mkdir -p .dum/branches
+
+touch ".dum/branches/${DEFAULT_BRANCH}"
+
+echo "${DEFAULT_BRANCH}" > ".dum/BRANCH"
