@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import sys
+
+log = Path(sys.argv[1])
+
+current_file = None
+contents = []
+cur_line = 0
+commit_msg = ""
+commit_nr = 0
+
+commands = {}
+
+def cmd(name):
+    def dec_cmd(f):
+        commands[name] = f
+        return f
+    return dec_cmd
+
+def save_current():
+    global current_file
+    if current_file:
+        with current_file.open("wb+") as f:
+            for line in contents:
+                f.write(line)
+                f.write(b"\n")
+    current_file = None
+
+@cmd("#")
+def _(arg):
+    # Comment
+    pass
+
+@cmd("file")
+def _(arg):
+    save_current()
+    global current_file
+    global contents
+    global cur_line
+
+    current_file = Path(arg.decode('utf-8'))
+    if current_file.exists():
+        contents = current_file.read_bytes().split(b"\n")[:-1]
+    else:
+        contents = []
+    cur_line = 0
+
+@cmd("line")
+def _(arg):
+    global cur_line
+    cur_line = int(arg)
+
+@cmd("add")
+def _(arg):
+    global cur_line
+    contents.insert(cur_line, arg)
+    cur_line += 1
+
+@cmd("del")
+def _(arg):
+    contents.pop(cur_line)
+
+@cmd("msg")
+def _(arg):
+    global commit_msg
+    commit_msg = arg.decode("utf-8")
+
+@cmd("commit")
+def _(arg):
+    assert arg == b""
+    global commit_msg
+    global commit_nr
+    # print(f"[COMMIT {commit_nr}]: {commit_msg}")
+    commit_nr += 1
+    commit_msg = ""
+    save_current()
+
+for line in log.read_bytes().split(b'\n'):
+    if not line.strip(): continue
+    parts = line.split(b" ", 1)
+
+    cmd = parts[0].decode('ascii').replace("-", "_")
+    arg = b""
+
+    if len(parts) == 2:
+        arg = parts[1]
+
+    if cmd in commands:
+        commands[cmd](arg)
+    else:
+        pass
+        #print("Unknown command", cmd)
