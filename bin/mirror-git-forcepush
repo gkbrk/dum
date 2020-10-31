@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+import tempfile
+import subprocess
+from pathlib import Path
+from collections import defaultdict
+import sys
+
+files = defaultdict(lambda: [])
+
+branch = Path(".dum/BRANCH").read_text().strip()
+log = Path(f".dum/branches/{branch}")
+
+def rm(path):
+    if not path.exists(): return
+
+    if path.is_dir():
+        for x in path.iterdir():
+            rm(x)
+        path.rmdir()
+    elif path.is_file():
+        path.unlink()
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    subprocess.run(["git", "init"], cwd=tmpdir)
+
+    f = None
+    l = None
+    msg = ""
+    author = ""
+
+    for line in log.read_bytes().split(b"\n"):
+        if not line.strip():
+            continue
+
+        parts = line.split(b" ", 1)
+
+        cmd = parts[0].decode('ascii').replace("-", "_")
+        arg = b""
+
+        if len(parts) == 2:
+            arg = parts[1]
+
+        if cmd == "file":
+            f = arg.decode('utf-8')
+            l = 0
+
+        if cmd == "line":
+            l = int(arg)
+
+        if cmd == "add":
+            files[f].insert(l, arg.decode('utf-8'))
+            l += 1
+
+        if cmd == "del":
+            files[f].pop(l)
+
+        if cmd == "msg":
+            msg = arg.decode("utf-8")
+
+        if cmd == "author":
+            author = arg.decode("utf-8")
+
+        if cmd == "commit":
+            for x in Path(tmpdir).iterdir():
+                r = x.relative_to(Path(tmpdir))
+                if str(r).startswith('.git'): continue
+
+                rm(x)
+
+            for p in files:
+                subprocess.run(["mkdir", "-p", Path(p).parent], cwd=tmpdir)
+                with (Path(tmpdir) / p).open("w+") as f:
+                    for l in files[p]:
+                        f.write(l)
+                        f.write("\n")
+
+            subprocess.run(["git", "add", "--all"], cwd=tmpdir)
+            subprocess.run(["git", "commit", "-m", msg, "--author", author], cwd=tmpdir)
+            f = None
+            l = 0
+            msg = ""
+            author = ""
+
+    subprocess.run(["git", "push", "-f", "--set-upstream", sys.argv[1], "master"], cwd=tmpdir)
